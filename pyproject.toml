@@ -1,0 +1,63 @@
+[project]
+name = "apisix-config-generator"
+description = "A Python library for generating APISIX routing configuration from OpenAPI specification"
+authors = [
+    { name = "Ferenc Nandor Janky & Attila Gombos", email = "info@effective-range.com" }
+]
+maintainers = [
+    { name = "Ferenc Nandor Janky & Attila Gombos", email = "info@effective-range.com" }
+]
+dependencies = [
+    "PyYAML",
+    "python-context-logger@git+https://github.com/EffectiveRange/python-context-logger.git@v1.3.2",
+    "python-common-utility@git+https://github.com/EffectiveRange/python-common-utility.git@v1.8.1"
+]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.0",
+    "pytest-console-scripts",
+    "pytest-coverage",
+    "coverage>=7.2",
+]
+
+lint = [
+    "flake8",
+    "mypy",
+    "types-PyYAML",
+]
+
+dev = [
+    "pytest>=7.0",
+    "pytest-console-scripts",
+    "pytest-coverage",
+    "coverage>=7.2",
+    "flake8",
+    "mypy",
+    "types-PyYAML",
+    "black"
+]
+
+[tool.setuptools]
+package-dir = { "" = "." }
+packages = ["config_generator"]
+
+[tool.setuptools.package-data]
+config_generator = ["py.typed"]
+
+[build-system]
+requires = ["setuptools>=61", "setuptools_scm"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+version_scheme = "guess-next-dev"
+local_scheme = "node-and-date"
+
+[tool.pytest]
+addopts = ["--verbose", "--capture=no"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+
+[tool.black]
+line-length = 120
