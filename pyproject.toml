@@ -9,10 +9,12 @@ maintainers = [
 ]
 dependencies = [
     "PyYAML",
-    "python-context-logger@git+https://github.com/EffectiveRange/python-context-logger.git@v1.3.2",
-    "python-common-utility@git+https://github.com/EffectiveRange/python-common-utility.git@v1.8.1"
+    "python-context-logger@git+https://github.com/EffectiveRange/python-context-logger.git@v1.3.2"
 ]
 dynamic = ["version"]
+
+[project.scripts]
+apisix-config-generator = "config_generator.generator:main"
 
 [project.optional-dependencies]
 test = [

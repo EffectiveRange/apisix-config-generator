@@ -5,6 +5,78 @@
 
 A Python library for generating APISIX routing configuration from OpenAPI specification
 
+## Example
+
+Look at this example OpenAPI specification in [examples/openapi.yaml](examples/openapi.yaml):
+
+```yaml
+openapi: 3.1.0
+info:
+  title: Camera API
+  version: 1.0.0
+paths:
+  /cameras/{cameraId}:
+    get:
+      operationId: getCamera
+      parameters:
+        - name: cameraId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Camera details
+```
+
+Select the operation by `operationId` and its upstream service in [examples/routing.yaml](examples/routing.yaml), beside the spec:
+
+```yaml
+api:
+  spec: openapi.yaml
+routes:
+  getCamera:
+    service: camera-service
+services:
+  camera-service:
+    url: http://camera-service:8080
+plugins:
+  oas-validator:
+    spec_url: https://www.example.com/openapi.json
+    verbose_errors: true
+```
+
+Generate the standalone APISIX configuration:
+
+```sh
+apisix-config-generator --routing examples/routing.yaml --output examples/apisix.yaml
+```
+
+The resulting `apisix.yaml` contains:
+
+```yaml
+routes:
+  - id: getCamera
+    uri: /cameras/:cameraId
+    methods:
+      - GET
+    upstream:
+      type: roundrobin
+      scheme: http
+      nodes:
+        camera-service:8080: 1
+      pass_host: pass
+    plugins:
+      oas-validator:
+        spec_url: https://www.example.com/openapi.json
+        verbose_errors: true
+#END
+```
+
+The `operationId` selects the route, `{cameraId}` becomes an APISIX path
+parameter, and the service URL supplies the upstream scheme and `host:port`.
+Only operations listed in `routing.yaml` are exposed.
+
 ## Python API
 
 `ConfigGenerator` is an abstract base class with a typed
@@ -46,7 +118,7 @@ services:
 Generate the standalone configuration in CI:
 
 ```sh
-python config_generator/generator.py --routing routing.yaml --output apisix.yaml
+apisix-config-generator --routing routing.yaml --output apisix.yaml
 ```
 
 The generated upstream uses `scheme: http` and
