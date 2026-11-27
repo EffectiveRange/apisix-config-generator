@@ -6,6 +6,8 @@ routes:
 services:
   camera-service:
     url: http://camera-service:8080
+# Optional APISIX plugins applied to all routes. Each route may also have a
+# plugins mapping; a route-level plugin replaces that plugin's shared settings.
 plugins:
   oas-validator:
     spec_url: https://www.example.com/openapi.json
