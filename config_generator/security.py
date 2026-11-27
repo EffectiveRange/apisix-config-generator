@@ -47,7 +47,7 @@ class OpenapiSecurityProvider(SecurityProvider):
         if ("security" in operation or "security" in spec) and "openid-connect" in plugins:
             raise ConfigError(
                 f"Route {operation_id} openid-connect plugin conflicts with OpenAPI security; "
-                "configure security_schemes instead"
+                "configure security instead"
             )
         if authentication is None:
             self._log.debug("No security plugin required", operation_id=operation_id)
@@ -88,9 +88,9 @@ class OpenapiSecurityProvider(SecurityProvider):
             raise ConfigError(f"{label} references unknown security scheme: {name}")
         scheme = mapping(schemes[name], f"Security scheme {name}")
         self._validate_security_scheme(scheme, scopes, name)
-        configured = mapping(routing.get("security_schemes", {}), "security_schemes")
+        configured = mapping(routing.get("security", {}), "security")
         if name not in configured:
-            raise ConfigError(f"Security scheme {name} requires IDP settings in routing.security_schemes")
+            raise ConfigError(f"Security scheme {name} requires IDP settings in routing.security")
         settings = mapping(configured[name], f"IDP settings for {name}")
         return self._openid_connect(settings, scheme, scopes, name)
 

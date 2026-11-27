@@ -8,7 +8,7 @@ routes:
 services:
   camera-service:
     url: http://camera-service:8080
-security_schemes:
+security:
   authentik:
     client_id: "${{AUTHENTIK_CLIENT_ID}}"
     client_secret: "${{AUTHENTIK_CLIENT_SECRET}}"

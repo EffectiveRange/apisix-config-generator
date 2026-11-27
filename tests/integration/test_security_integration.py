@@ -46,7 +46,7 @@ class TestSecurityIntegration(TestCase):
             "api": {"spec": "openapi.yaml"},
             "routes": {"getCamera": {"service": "camera"}},
             "services": {"camera": {"url": "http://camera:8080"}},
-            "security_schemes": {"authentik": self.idp},
+            "security": {"authentik": self.idp},
         }
 
     def test_composition_preserves_plugins_and_separates_route_scopes(self) -> None:

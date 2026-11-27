@@ -67,7 +67,7 @@ class TestSecurity(TestCase):
             "client_secret": "${{AUTHENTIK_CLIENT_SECRET}}",
             "discovery": "https://idp.example/application/o/cameras/.well-known/openid-configuration",
         }
-        self.routing: dict[str, Any] = {"security_schemes": {"authentik": self.idp}}
+        self.routing: dict[str, Any] = {"security": {"authentik": self.idp}}
 
     def test_oauth2_security_generates_introspection_plugin(self) -> None:
         # Given
@@ -127,7 +127,7 @@ class TestSecurity(TestCase):
                 # Given
                 self.spec["security"] = [{"authentik": ["cameras:write"]}]
                 self.operation["security"] = security
-                self.routing["security_schemes"] = {}
+                self.routing["security"] = {}
 
                 # When
                 result = self.provider.generate(self.operation, self.routing, self.spec, "getCamera", {})
@@ -252,7 +252,7 @@ class TestSecurity(TestCase):
                     if explicit:
                         settings["use_jwks"] = True
                     settings[field] = value
-                    self.routing["security_schemes"]["authentik"] = settings
+                    self.routing["security"]["authentik"] = settings
 
                     # When
                     with self.assertRaises(ConfigError) as error:
@@ -344,7 +344,7 @@ class TestSecurity(TestCase):
             with self.subTest(field=field, value=value):
                 print()
                 # Given
-                self.routing["security_schemes"]["authentik"] = {**self.idp, field: value}
+                self.routing["security"]["authentik"] = {**self.idp, field: value}
 
                 # When
                 with self.assertRaises(ValueError) as error:
