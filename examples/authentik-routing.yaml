@@ -1,0 +1,15 @@
+api:
+  spec: authentik-openapi.yaml
+routes:
+  getCamera:
+    service: camera-service
+  getHealth:
+    service: camera-service
+services:
+  camera-service:
+    url: http://camera-service:8080
+security_schemes:
+  authentik:
+    client_id: "${{AUTHENTIK_CLIENT_ID}}"
+    client_secret: "${{AUTHENTIK_CLIENT_SECRET}}"
+    discovery: https://authentik.example.com/application/o/cameras/.well-known/openid-configuration

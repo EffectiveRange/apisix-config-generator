@@ -1,0 +1,17 @@
+openapi: 3.1.0
+info:
+  title: Camera API
+  version: 1.0.0
+paths:
+  /cameras/{cameraId}:
+    get:
+      operationId: getCamera
+      parameters:
+        - name: cameraId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Camera details

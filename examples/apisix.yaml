@@ -1,0 +1,16 @@
+routes:
+- id: getCamera
+  uri: /cameras/:cameraId
+  methods:
+  - GET
+  upstream:
+    type: roundrobin
+    scheme: http
+    nodes:
+      camera-service:8080: 1
+    pass_host: pass
+  plugins:
+    oas-validator:
+      spec_url: https://www.example.com/openapi.json
+      verbose_errors: true
+#END
