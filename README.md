@@ -4,9 +4,12 @@
 
 | Name                              |    Stmts |     Miss |   Branch |   BrPart |   Cover |   Missing |
 |---------------------------------- | -------: | -------: | -------: | -------: | ------: | --------: |
-| config\_generator/\_\_init\_\_.py |        2 |        0 |        0 |        0 |    100% |           |
-| config\_generator/generator.py    |      174 |        7 |       66 |        9 |     93% |85, 87-\>89, 106-\>108, 127, 166, 176, 178, 200, 230 |
-| **TOTAL**                         |  **176** |    **7** |   **66** |    **9** | **93%** |           |
+| config\_generator/\_\_init\_\_.py |        5 |        0 |        0 |        0 |    100% |           |
+| config\_generator/cli.py          |       25 |        0 |        0 |        0 |    100% |           |
+| config\_generator/common.py       |       11 |        0 |        6 |        0 |    100% |           |
+| config\_generator/generator.py    |      164 |        0 |       60 |        1 |     99% | 123-\>126 |
+| config\_generator/security.py     |      109 |        0 |       64 |        0 |    100% |           |
+| **TOTAL**                         |  **314** |    **0** |  **130** |    **1** | **99%** |           |
 
 
 ## Setup coverage badge
