@@ -1,0 +1,40 @@
+openapi: 3.1.0
+info:
+  title: Authenticated Camera API
+  version: 1.0.0
+components:
+  securitySchemes:
+    authentik:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://authentik.example.com/application/o/authorize/
+          tokenUrl: https://authentik.example.com/application/o/token/
+          scopes:
+            cameras:read: Read camera details
+security:
+  - authentik: [cameras:read]
+paths:
+  /cameras/{cameraId}:
+    get:
+      operationId: getCamera
+      parameters:
+        - name: cameraId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Camera details
+        "401":
+          description: Missing or invalid access token
+        "403":
+          description: Missing cameras:read scope
+  /health:
+    get:
+      operationId: getHealth
+      security: []
+      responses:
+        "200":
+          description: Service health

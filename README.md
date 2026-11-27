@@ -52,7 +52,7 @@ Generate the standalone APISIX configuration:
 apisix-config-generator --routing examples/routing.yaml --output examples/apisix.yaml
 ```
 
-The resulting `apisix.yaml` contains:
+The resulting [examples/apisix.yaml](examples/apisix.yaml) contains:
 
 ```yaml
 routes:
@@ -144,3 +144,117 @@ including its generated `#END` marker.
 Confirm environment interpolation support against your pinned APISIX version
 using the [standalone deployment documentation](https://apisix.apache.org/docs/apisix/deployment-modes/#to-config_provider-yaml).
 Recreate the container when changing its environment.
+
+## Authenticate API requests with authentik
+
+OpenAPI `security` requirements generate an APISIX
+[`openid-connect` plugin](https://apisix.apache.org/docs/apisix/plugins/openid-connect/)
+for secured routes. Clients obtain an **access token** from authentik and send it
+as `Authorization: Bearer <access-token>`. By default, APISIX validates JWT tokens
+locally using authentik's JWKS: missing or invalid tokens receive `401`,
+and tokens without the required scopes receive `403`. This is bearer-only API
+authentication, not a browser login redirect flow.
+
+Configure IDP credentials and endpoints in `routing.yaml`, using the same scheme
+name as `components.securitySchemes` in OpenAPI:
+
+```yaml
+security_schemes:
+  authentik:
+    client_id: "${{AUTHENTIK_CLIENT_ID}}"
+    client_secret: "${{AUTHENTIK_CLIENT_SECRET}}"
+    discovery: https://authentik.example.com/application/o/cameras/.well-known/openid-configuration
+```
+
+`client_id` and `client_secret` are required. `discovery` is required for `oauth2`
+and HTTP bearer schemes; for `openIdConnect`, it defaults to the scheme's
+`openIdConnectUrl`. Set `use_jwks: false` to select introspection.
+In that mode, `introspection_endpoint` is optional when provided by discovery.
+`introspection_endpoint_auth_method` accepts `client_secret_basic` (default) or
+`client_secret_post`. Endpoint URLs must use HTTPS, and TLS certificate
+verification is always enabled. Complete `${{NAME}}` placeholders are also
+accepted for credentials and endpoint URLs; endpoint environment values must
+be full HTTPS URLs, unlike upstream address values.
+
+Supported security schemes are `type: oauth2`, `type: openIdConnect`, and
+`type: http` with `scheme: bearer`. OAuth2 scopes must be declared in the scheme's
+flows. Required OAuth2/OIDC scopes become the plugin's `required_scopes`;
+HTTP bearer requirements must use an empty scope list.
+
+API-level `security` applies unless overridden by an operation. `security: []`
+or `security: [{}]` makes an operation public, without generating authentication.
+If neither level declares security, existing manually configured plugins are
+preserved. For declared security, a manually configured `openid-connect` plugin
+is rejected to prevent conflicts; configure `security_schemes` instead.
+Unrelated global and per-route plugins continue to work.
+
+Only one security requirement containing one scheme is supported per operation.
+Alternative requirements (OR), combined schemes (AND), security scheme `$ref`s,
+API keys, and other authentication types fail explicitly. Missing IDP settings,
+unknown schemes and malformed requirements also fail generation, rather than
+silently exposing a secured route.
+
+See the complete [secured OpenAPI spec](examples/authentik-openapi.yaml),
+[routing descriptor](examples/authentik-routing.yaml), and
+[generated configuration](examples/authentik-apisix.yaml). The example protects
+`getCamera` with `cameras:read` and leaves `getHealth` public:
+
+```sh
+apisix-config-generator --routing examples/authentik-routing.yaml --output examples/authentik-apisix.yaml
+```
+
+Create an authentik OAuth2/OpenID provider associated with the `cameras`
+application. Configure an asymmetric signing key, access tokens whose audience
+matches `client_id`, and the necessary scope mappings (such as `cameras:read`).
+When selecting introspection, use a confidential provider's credentials. Tokens must
+be issued by that provider; for tokens from another provider, explicitly grant
+cross-provider introspection via authentik's **Federated OAuth2/OpenID Providers**
+setting. See [authentik's provider documentation](https://docs.goauthentik.io/add-secure-apps/providers/oauth2/).
+
+Pass credentials into the APISIX container, not the CI generator environment:
+
+```yaml
+environment:
+  AUTHENTIK_CLIENT_ID: ${AUTHENTIK_CLIENT_ID:?AUTHENTIK_CLIENT_ID must be set}
+  AUTHENTIK_CLIENT_SECRET: ${AUTHENTIK_CLIENT_SECRET:?AUTHENTIK_CLIENT_SECRET must be set}
+```
+
+Do not commit real credentials. APISIX must be able to reach discovery and
+JWKS endpoints (or introspection endpoints when selected), trust their TLS certificates, and have `openid-connect`
+enabled. Confirm plugin, `required_scopes` and environment interpolation support
+in your pinned APISIX version (the generated settings were checked against the
+APISIX 3.14.1 plugin). Recreate the container when changing its environment.
+
+### Local JWT validation with JWKS
+
+JWKS is the default. You can explicitly set `use_jwks: true` to validate signed JWT access tokens
+locally instead of using introspection:
+
+```yaml
+security_schemes:
+  authentik:
+    use_jwks: true
+    client_id: "${{AUTHENTIK_CLIENT_ID}}"
+    client_secret: "${{AUTHENTIK_CLIENT_SECRET}}"
+    discovery: https://authentik.example.com/application/o/cameras/.well-known/openid-configuration
+```
+
+Omitting `use_jwks` selects JWKS. Set it to `false` to opt into introspection.
+Remove `introspection_endpoint` and
+`introspection_endpoint_auth_method` when enabling JWKS; conflicting settings
+are rejected. `client_secret` remains required by the APISIX plugin schema,
+although JWT verification does not use it to call introspection.
+
+APISIX retrieves the JWKS URL and issuer from discovery and caches discovery,
+keys and verification results. It does not introspect each token, but still
+contacts authentik when discovery or keys need fetching or refreshing.
+Configure an asymmetric signing key on the authentik provider and ensure its
+JWT access tokens have an `aud` claim containing the configured `client_id`.
+JWKS mode requires that audience match, rejects unsigned/unsupported token
+algorithms, and retains the OpenAPI scope checks. The token's `scope` claim must
+be a space-separated string for those checks. Opaque tokens cannot use this mode.
+
+Revoked tokens can remain usable until expiry: local JWT validation does not
+check revocation with authentik. Use short-lived access tokens or introspection
+when earlier revocation detection is required. APISIX must trust the IDP's TLS
+certificate and support `use_jwks` and `claim_validator` in the pinned version.
