@@ -85,9 +85,9 @@ Only operations listed in `routing.yaml` are exposed.
 
 ```python
 from pathlib import Path
-from config_generator import ConfigGenerator, OpenapiConfigGenerator
+from config_generator import ConfigGenerator, OpenapiConfigGenerator, OpenapiSecurityProvider
 
-generator: ConfigGenerator = OpenapiConfigGenerator()
+generator: ConfigGenerator = OpenapiConfigGenerator(OpenapiSecurityProvider())
 routing = generator.load_document(Path("routing.yaml"))
 spec = generator.load_document(Path("openapi.yaml"))
 config = generator.generate(routing, spec)
@@ -98,6 +98,25 @@ Alternatively, `generator.generate_file(Path("routing.yaml"), Path("apisix.yaml"
 loads the specification relative to the routing file (or from its HTTP(S) URL)
 and atomically writes the configuration. Existing `generate` and `load_document`
 functions remain available as compatibility wrappers.
+
+Security handling is implemented separately in `config_generator/security.py`.
+`SecurityProvider` is the abstract interface; `OpenapiSecurityProvider` implements
+the OpenAPI-to-APISIX authentication mapping. Inject a provider through the
+constructor to replace security handling:
+
+```python
+from config_generator import OpenapiConfigGenerator, OpenapiSecurityProvider, SecurityProvider
+
+security: SecurityProvider = OpenapiSecurityProvider()
+generator = OpenapiConfigGenerator(security_provider=security)
+```
+
+The constructor requires a `SecurityProvider` instance and does not select an
+implementation. The CLI and package-level compatibility functions compose the
+generator with `OpenapiSecurityProvider`. Providers receive the operation, routing descriptor, API spec,
+operation ID and merged route plugins; they return security plugins to merge and
+raise `ConfigError` for unsupported requirements or conflicts. The generator
+continues to log and re-raise generation errors.
 
 ## Runtime upstream addresses
 

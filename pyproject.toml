@@ -14,7 +14,7 @@ dependencies = [
 dynamic = ["version"]
 
 [project.scripts]
-apisix-config-generator = "config_generator.generator:main"
+apisix-config-generator = "config_generator.cli:main"
 
 [project.optional-dependencies]
 test = [

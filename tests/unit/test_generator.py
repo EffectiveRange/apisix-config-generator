@@ -8,13 +8,21 @@ import unittest
 from pathlib import Path
 from collections.abc import Callable
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 from urllib.error import URLError
 from unittest import TestCase
 
 import yaml
 
-from config_generator import ConfigError, ConfigGenerator, OpenapiConfigGenerator, generate, load_document, main
+from config_generator import (
+    ConfigError,
+    ConfigGenerator,
+    OpenapiConfigGenerator,
+    SecurityProvider,
+    generate,
+    load_document,
+    main,
+)
 from context_logger import setup_logging
 
 
@@ -26,7 +34,12 @@ class TestGenerator(TestCase):
 
     def setUp(self) -> None:
         print()
-        self.generator: ConfigGenerator = OpenapiConfigGenerator()
+        self.security_provider = MagicMock(spec=SecurityProvider)
+        self.security_provider.generate.return_value = {}
+        self.generator: ConfigGenerator = OpenapiConfigGenerator(self.security_provider)
+        provider_factory = patch("config_generator.cli.OpenapiSecurityProvider", return_value=self.security_provider)
+        provider_factory.start()
+        self.addCleanup(provider_factory.stop)
         self.routing: dict[str, Any] = {
             "api": {"spec": "openapi.yaml"},
             "routes": {"getCamera": {"service": "camera"}},
@@ -42,7 +55,7 @@ class TestGenerator(TestCase):
         routing, spec = self.routing, self.spec
 
         # When
-        result = generate(routing, spec)
+        result = self.generator.generate(routing, spec)
 
         # Then
         self.assertEqual(
@@ -61,6 +74,42 @@ class TestGenerator(TestCase):
                         },
                     }
                 ],
+            },
+        )
+
+    def test_security_provider_is_required(self) -> None:
+        # Given
+        constructor = inspect.signature(OpenapiConfigGenerator)
+
+        # When
+        with self.assertRaises(TypeError) as error:
+            constructor.bind()
+
+        # Then
+        self.assertIn("security_provider", str(error.exception))
+
+    def test_security_plugins_come_from_injected_provider(self) -> None:
+        # Given
+        self.security_provider.generate.return_value = {"custom-auth": {"enabled": True}}
+        self.routing["plugins"] = {"cors": {}}
+        self.routing["routes"]["getCamera"]["plugins"] = {"limit-count": {"count": 10}}
+
+        # When
+        result = self.generator.generate(self.routing, self.spec)
+
+        # Then
+        self.security_provider.generate.assert_called_once()
+        operation, routing, spec, operation_id, _ = self.security_provider.generate.call_args.args
+        self.assertEqual(operation, self.spec["paths"]["/cameras/{cameraId}"]["get"])
+        self.assertIs(routing, self.routing)
+        self.assertIs(spec, self.spec)
+        self.assertEqual(operation_id, "getCamera")
+        self.assertEqual(
+            result["routes"][0]["plugins"],
+            {
+                "cors": {},
+                "limit-count": {"count": 10},
+                "custom-auth": {"enabled": True},
             },
         )
 
@@ -391,7 +440,7 @@ class TestGenerator(TestCase):
             self.routing["api"]["spec"] = ""
             routing.write_text(yaml.safe_dump(self.routing), encoding="utf-8")
             with patch("config_generator.generator.get_logger") as get_logger:
-                generator = OpenapiConfigGenerator()
+                generator = OpenapiConfigGenerator(self.security_provider)
                 logger = get_logger.return_value
                 failures: list[tuple[Callable[[], object], type[Exception], str]] = [
                     (lambda: generator.generate({}, self.spec), ConfigError, "Configuration generation failed"),
@@ -432,7 +481,7 @@ class TestGenerator(TestCase):
                 print()
                 # Given
                 with patch("config_generator.generator.get_logger") as get_logger:
-                    generator = OpenapiConfigGenerator()
+                    generator = OpenapiConfigGenerator(self.security_provider)
                     with patch("config_generator.generator.urlopen", side_effect=failure):
 
                         # When

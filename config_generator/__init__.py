@@ -1,19 +1,20 @@
+from .common import ConfigError
+from .security import OpenapiSecurityProvider, SecurityProvider
 from .generator import (
-    ConfigError,
     ConfigGenerator,
     OpenapiConfigGenerator,
     RouteConfig,
     StandaloneConfig,
     UpstreamConfig,
-    generate,
-    load_document,
-    main,
 )
+from .cli import generate, load_document, main
 
 __all__ = [
     "ConfigError",
     "ConfigGenerator",
     "OpenapiConfigGenerator",
+    "SecurityProvider",
+    "OpenapiSecurityProvider",
     "RouteConfig",
     "StandaloneConfig",
     "UpstreamConfig",
